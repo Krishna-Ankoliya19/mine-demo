@@ -1,50 +1,79 @@
-import React, { useEffect, useState } from 'react';
-import { getRealm } from '../lib/realm';
-import { BSON } from 'realm';
-import { Profile } from '../models/User';
-import { YStack, Text, ScrollView, Card, Button } from 'tamagui';
+import React, { useEffect, useState } from "react";
+import { Platform } from "react-native";
+import { YStack, Text, ScrollView, Card, Button } from "tamagui";
+
+type Profile = {
+  _id: any;
+  name: string;
+  email: string;
+  gender: string;
+  age: number;
+  interests: string[];
+  dateOfBirth: Date;
+};
 
 export default function ProfilesScreen() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   useEffect(() => {
-    const realm = getRealm();
-    const storedProfiles = realm.objects<Profile>('Profile');
+    if (Platform.OS === "web") return;
 
-    const updateProfiles = () => {
-      setProfiles([...storedProfiles]);
-    };
+    let realm: any;
+    let storedProfiles: any;
 
-    // Initial load
-    updateProfiles();
+    (async () => {
+      const { getRealm } = await import("../lib/realm.native");
+      const r = getRealm();
+      realm = r;
+      storedProfiles = r.objects("Profile");
 
-    // Attach listener
-    storedProfiles.addListener(updateProfiles);
+      const updateProfiles = () => {
+        setProfiles([...storedProfiles]);
+      };
 
-    // Cleanup listener on unmount
-    return () => {
-      storedProfiles.removeListener(updateProfiles);
-      realm.close();
-    };
+      updateProfiles();
+      storedProfiles.addListener(updateProfiles);
+
+      // Cleanup
+      return () => {
+        storedProfiles?.removeListener(updateProfiles);
+        realm?.close();
+      };
+    })();
   }, []);
 
-  const deleteProfile = (id: BSON.ObjectId) => {
-    const realm = getRealm();
-    realm.write(() => {
-      const profileToDelete = realm.objectForPrimaryKey<Profile>('Profile', id);
-      if (profileToDelete) realm.delete(profileToDelete);
+  const deleteProfile = async (id: any) => {
+    if (Platform.OS === "web") return;
+
+    const { getRealm } = await import("../lib/realm.native");
+    const r = getRealm();
+    const { BSON } = await import("realm");
+
+    r.write(() => {
+      const profileToDelete = r.objectForPrimaryKey("Profile", new BSON.ObjectId(id));
+      if (profileToDelete) r.delete(profileToDelete);
     });
-    // No need to manually refresh — listener will handle it
   };
 
   const InfoRow = ({ label, value }: { label: string; value: string }) => (
     <Text>
-      <Text color="$gray10">{label}</Text>{' '}
+      <Text color="$gray10">{label}</Text>{" "}
       <Text color="$color12" fontWeight="500">
         {value}
       </Text>
     </Text>
   );
+
+  if (Platform.OS === "web") {
+    return (
+      <YStack padding="$4" flex={1} alignItems="center" justifyContent="center">
+        <Text fontSize="$8" fontWeight="bold" color="$blue10">
+          Saved Profiles (Web)
+        </Text>
+        <Text color="$gray10">Profile listing not available on web.</Text>
+      </YStack>
+    );
+  }
 
   return (
     <ScrollView>
@@ -58,7 +87,7 @@ export default function ProfilesScreen() {
         ) : (
           profiles.map((profile) => (
             <Card
-              key={profile._id.toHexString()}
+              key={profile._id.toString()}
               elevate
               bordered
               padding="$4"
@@ -75,8 +104,8 @@ export default function ProfilesScreen() {
                 <InfoRow label="Email:" value={profile.email} />
                 <InfoRow label="Gender:" value={profile.gender} />
                 <InfoRow label="Age:" value={profile.age.toString()} />
-                <InfoRow label="Interests:" value={profile.interests.join(', ')} />
-                <InfoRow label="DOB:" value={profile.dateOfBirth.toDateString()} />
+                <InfoRow label="Interests:" value={profile.interests.join(", ")} />
+                <InfoRow label="DOB:" value={new Date(profile.dateOfBirth).toDateString()} />
                 <Button
                   backgroundColor="$red10"
                   color="white"

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Platform } from "react-native";
-import { getRealm } from "../lib/realm";
-import { BSON } from "realm";
+// import { getRealm } from "../lib/realm";
+// import { BSON } from "realm";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 import {
@@ -28,6 +28,11 @@ export default function HomeScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleSubmit = async () => {
+    if (Platform.OS === "web") {
+      return;
+    }
+    const { getRealm } = await import("../lib/realm.native");
+    const { BSON } = await import("realm");
     const realm = getRealm();
     realm.write(() => {
       realm.create("Profile", {
@@ -52,6 +57,15 @@ export default function HomeScreen() {
         : [...prev, interest]
     );
   };
+  if (Platform.OS === "web") {
+    return (
+      <YStack flex={1} alignItems="center" justifyContent="center">
+        <Text color="$blue10" fontSize="$8" fontWeight="bold">
+          Hello World
+        </Text>
+      </YStack>
+    );
+  }
 
   return (
     <ScrollView>
@@ -88,12 +102,13 @@ export default function HomeScreen() {
         />
 
         <Label>Gender</Label>
-        <Select
-          value={gender}
-          onValueChange={setGender}
-          size="$4"
-        >
-          <Select.Trigger width="100%" borderColor="$color7" borderWidth={1} borderRadius="$4">
+        <Select value={gender} onValueChange={setGender} size="$4">
+          <Select.Trigger
+            width="100%"
+            borderColor="$color7"
+            borderWidth={1}
+            borderRadius="$4"
+          >
             <Select.Value />
           </Select.Trigger>
 

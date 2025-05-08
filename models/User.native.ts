@@ -1,4 +1,4 @@
-// app/models/Profile.ts
+// app/models/User.native.ts
 import { BSON } from 'realm';
 
 export class Profile extends Realm.Object<Profile> {
